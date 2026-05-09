@@ -16,12 +16,36 @@
   --accent-hover: #4a4a34;
   --border: #e2e2d5;
   --card: #ffffff;
+  --header-bg: #ffffff;
+  --stat-card-bg: #ffffff;
+  --input-bg: #f5f5f0;
+  --secondary-bg: #fafaf7;
+  --modal-bg: #ffffff;
+  --button-secondary: #f0f0e8;
+}
+
+[data-theme='dark'] {
+  --bg: #1a1a14;
+  --text-main: #d6d6c2;
+  --text-heading: #ecece2;
+  --text-muted: #8a8a75;
+  --accent: #7d7d5d;
+  --accent-hover: #8a8a75;
+  --border: #2a2a24;
+  --card: #22221b;
+  --header-bg: #22221b;
+  --stat-card-bg: #22221b;
+  --input-bg: #1a1a14;
+  --secondary-bg: #1e1e18;
+  --modal-bg: #22221b;
+  --button-secondary: #2a2a24;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text-main);
   font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .font-serif {
@@ -37,4 +61,21 @@ body {
 
 .mono-text {
   font-family: var(--font-mono);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
