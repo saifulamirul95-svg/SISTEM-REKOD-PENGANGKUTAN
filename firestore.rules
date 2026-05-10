@@ -29,11 +29,11 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       
-      allow create: if isSignedIn() && isValidId(studentId) && isValidStudent(request.resource.data) && request.resource.data.id == studentId;
+      allow create: if isValidId(studentId) && isValidStudent(request.resource.data) && request.resource.data.id == studentId;
       
-      allow update: if isSignedIn() && isValidStudent(request.resource.data) && (
+      allow update: if isValidStudent(request.resource.data) && (
         // Action: Update Record
         request.resource.data.diff(resource.data).affectedKeys().hasAny(['transportMode', 'hasLicense', 'licenseType']) &&
         request.resource.data.id == resource.data.id &&
@@ -42,7 +42,7 @@ service cloud.firestore {
         request.resource.data.className == resource.data.className
       );
       
-      allow delete: if false; // Prevention of accidental loss of data
+      allow delete: if false;
     }
   }
 }

@@ -13,19 +13,14 @@ import {
   X,
   Edit2,
   Moon,
-  Sun,
-  LogIn,
-  LogOut
+  Sun
 } from 'lucide-react';
 import { Student, TransportMode, LicenseType } from './types';
 import { studentService } from './services/studentService';
-import { auth, signInWithGoogle } from './lib/firebase';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getInitialStudents } from './data/initialStudents';
 
 export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedForm, setSelectedForm] = useState('');
@@ -49,28 +44,28 @@ export default function App() {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribeAuth();
+    // Initialize data and subscription
+    const initData = async () => {
+      try {
+        await studentService.seedInitialData(getInitialStudents());
+        const unsubscribe = studentService.subscribeToStudents((updatedStudents) => {
+          setStudents(updatedStudents);
+          setLoading(false);
+        });
+        return unsubscribe;
+      } catch (error) {
+        console.error("Initialization error", error);
+        setLoading(false);
+      }
+    };
+
+    let unsubscribe: any;
+    initData().then(unsub => unsubscribe = unsub);
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setStudents([]);
-      return;
-    }
-
-    // Attempt to seed data if it's the first time
-    studentService.seedInitialData(getInitialStudents());
-
-    const unsubscribeStudents = studentService.subscribeToStudents((updatedStudents) => {
-      setStudents(updatedStudents);
-    });
-
-    return () => unsubscribeStudents();
-  }, [user]);
 
   const stats = useMemo(() => studentService.getStats(students), [students]);
 
@@ -113,28 +108,6 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg)] p-8 text-center">
-        <div className="w-20 h-20 bg-[var(--accent)] rounded-[24px] flex items-center justify-center text-white mb-8 shadow-xl">
-          <Activity size={40} />
-        </div>
-        <h1 className="text-4xl font-serif font-bold text-[var(--text-heading)] mb-4">Sistem Rekod Pengangkutan</h1>
-        <p className="text-[var(--text-muted)] max-w-sm mb-10 leading-relaxed">
-          Sila log masuk untuk mengakses pangkalan data pelajar dan merekod maklumat pengangkutan.
-        </p>
-        <button 
-          onClick={() => signInWithGoogle()}
-          className="flex items-center gap-3 bg-[var(--accent)] text-white px-8 py-4 rounded-full font-bold shadow-lg hover:opacity-90 transition-all active:scale-95"
-        >
-          <LogIn size={20} />
-          Log Masuk dengan Google
-        </button>
-        <p className="mt-8 text-[10px] text-[var(--text-muted)] uppercase tracking-[0.2em]">Pangkalan Data Pusat SMK Perdana</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text-main)] transition-colors duration-300">
       {/* Header */}
@@ -156,32 +129,6 @@ export default function App() {
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
-          <div className="h-8 w-px bg-[var(--border)]" />
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden md:block">
-              <p className="text-[10px] font-bold text-[var(--text-heading)] leading-none">{user.displayName}</p>
-              <button 
-                onClick={() => signOut(auth)}
-                className="text-[9px] text-red-500 hover:underline font-bold uppercase tracking-wider"
-              >
-                Log Keluar
-              </button>
-            </div>
-            {user.photoURL ? (
-              <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--border)] shadow-sm" />
-            ) : (
-              <div className="w-10 h-10 bg-[var(--accent)] text-white rounded-full flex items-center justify-center font-bold">
-                {user.displayName?.[0] || 'U'}
-              </div>
-            )}
-            <button 
-              onClick={() => signOut(auth)}
-              className="md:hidden p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-              title="Log Keluar"
-            >
-              <LogOut size={20} />
-            </button>
-          </div>
         </div>
       </header>
 
