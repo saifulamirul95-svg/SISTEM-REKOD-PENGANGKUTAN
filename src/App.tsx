@@ -117,8 +117,8 @@ export default function App() {
             <Activity size={24} />
           </div>
           <div>
-            <h1 className="text-xl font-serif font-bold text-[var(--text-heading)] leading-none">Sistem Rekod</h1>
-            <p className="text-[9px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest hidden sm:block">Fasa Perekodan Pelajar</p>
+            <h1 className="text-lg font-serif font-bold text-[var(--text-heading)] leading-tight">SISTEM REKOD PENGANGKUTAN PELAJAR</h1>
+            <p className="text-[9px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest hidden sm:block">SEKOLAH MENENGAH KEBANGSAAN SERI PERPATIH</p>
           </div>
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
