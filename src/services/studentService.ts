@@ -1,58 +1,112 @@
 import { Student, TransportStats } from '../types';
-import { getInitialStudents } from '../data/initialStudents';
+import { db, auth } from '../lib/firebase';
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  updateDoc, 
+  onSnapshot, 
+  setDoc,
+  query,
+  limit
+} from 'firebase/firestore';
 
-const STORAGE_KEY = 'student_transport_records';
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
 
-const isLocalStorageAvailable = () => {
-  try {
-    const test = '__storage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch (e) {
-    return false;
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
   }
-};
+}
 
-// Memory fallback to ensure app works in restrictive iframes (Google Sites)
-const memoryStorage: Record<string, string> = {};
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+const COLLECTION_PATH = 'students';
 
 export const studentService = {
-  getStudents: (): Student[] => {
-    const storageAvailable = isLocalStorageAvailable();
-    const stored = storageAvailable 
-      ? localStorage.getItem(STORAGE_KEY)
-      : memoryStorage[STORAGE_KEY];
-
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error('Failed to parse stored students', e);
-      }
-    }
-    
-    const initial = getInitialStudents();
-    if (storageAvailable) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    } else {
-      memoryStorage[STORAGE_KEY] = JSON.stringify(initial);
-    }
-    return initial;
+  subscribeToStudents: (callback: (students: Student[]) => void) => {
+    const q = query(collection(db, COLLECTION_PATH));
+    return onSnapshot(q, (snapshot) => {
+      const students = snapshot.docs.map(doc => doc.data() as Student);
+      callback(students);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, COLLECTION_PATH);
+    });
   },
 
-  updateStudent: (updatedStudent: Student): void => {
-    const students = studentService.getStudents();
-    const index = students.findIndex(s => s.id === updatedStudent.id);
-    if (index !== -1) {
-      students[index] = updatedStudent;
-      const data = JSON.stringify(students);
-      
-      if (isLocalStorageAvailable()) {
-        localStorage.setItem(STORAGE_KEY, data);
-      } else {
-        memoryStorage[STORAGE_KEY] = data;
+  getStudentsOnce: async (): Promise<Student[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, COLLECTION_PATH));
+      return snapshot.docs.map(doc => doc.data() as Student);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, COLLECTION_PATH);
+      return [];
+    }
+  },
+
+  // Helper to seed initial data if collection is empty
+  seedInitialData: async (initialStudents: Student[]) => {
+    try {
+      const q = query(collection(db, COLLECTION_PATH), limit(1));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        console.log('Seeding initial data to Firestore...');
+        for (const student of initialStudents) {
+          await setDoc(doc(db, COLLECTION_PATH, student.id), student);
+        }
       }
+    } catch (error) {
+      console.error('Failed to seed data', error);
+    }
+  },
+
+  updateStudent: async (updatedStudent: Student): Promise<void> => {
+    const studentRef = doc(db, COLLECTION_PATH, updatedStudent.id);
+    try {
+      await updateDoc(studentRef, {
+        transportMode: updatedStudent.transportMode,
+        hasLicense: updatedStudent.hasLicense,
+        licenseType: updatedStudent.licenseType
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION_PATH}/${updatedStudent.id}`);
     }
   },
 

@@ -13,13 +13,20 @@ import {
   X,
   Edit2,
   Moon,
-  Sun
+  Sun,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { Student, TransportMode, LicenseType } from './types';
 import { studentService } from './services/studentService';
+import { auth, signInWithGoogle } from './lib/firebase';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { getInitialStudents } from './data/initialStudents';
 
 export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedForm, setSelectedForm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
@@ -42,8 +49,28 @@ export default function App() {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
-    setStudents(studentService.getStudents());
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setStudents([]);
+      return;
+    }
+
+    // Attempt to seed data if it's the first time
+    studentService.seedInitialData(getInitialStudents());
+
+    const unsubscribeStudents = studentService.subscribeToStudents((updatedStudents) => {
+      setStudents(updatedStudents);
+    });
+
+    return () => unsubscribeStudents();
+  }, [user]);
 
   const stats = useMemo(() => studentService.getStats(students), [students]);
 
@@ -68,11 +95,45 @@ export default function App() {
     });
   }, [students, searchTerm, selectedForm, selectedClass]);
 
-  const handleUpdateStudent = (updated: Student) => {
-    studentService.updateStudent(updated);
-    setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
-    setEditingStudent(null);
+  const handleUpdateStudent = async (updated: Student) => {
+    try {
+      await studentService.updateStudent(updated);
+      setEditingStudent(null);
+    } catch (error) {
+      // Error is already logged in service
+      alert('Gagal menyimpan rekod. Sila cuba lagi.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+        <Activity className="animate-spin text-[var(--accent)]" size={48} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg)] p-8 text-center">
+        <div className="w-20 h-20 bg-[var(--accent)] rounded-[24px] flex items-center justify-center text-white mb-8 shadow-xl">
+          <Activity size={40} />
+        </div>
+        <h1 className="text-4xl font-serif font-bold text-[var(--text-heading)] mb-4">Sistem Rekod Pengangkutan</h1>
+        <p className="text-[var(--text-muted)] max-w-sm mb-10 leading-relaxed">
+          Sila log masuk untuk mengakses pangkalan data pelajar dan merekod maklumat pengangkutan.
+        </p>
+        <button 
+          onClick={() => signInWithGoogle()}
+          className="flex items-center gap-3 bg-[var(--accent)] text-white px-8 py-4 rounded-full font-bold shadow-lg hover:opacity-90 transition-all active:scale-95"
+        >
+          <LogIn size={20} />
+          Log Masuk dengan Google
+        </button>
+        <p className="mt-8 text-[10px] text-[var(--text-muted)] uppercase tracking-[0.2em]">Pangkalan Data Pusat SMK Perdana</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text-main)] transition-colors duration-300">
@@ -82,9 +143,12 @@ export default function App() {
           <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center text-white">
             <Activity size={24} />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-[var(--text-heading)]">Sistem Rekod</h1>
+          <div>
+            <h1 className="text-xl font-serif font-bold text-[var(--text-heading)] leading-none">Sistem Rekod</h1>
+            <p className="text-[9px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest hidden sm:block">Fasa Perekodan Pelajar</p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button 
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-[var(--secondary-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-all"
@@ -92,26 +156,51 @@ export default function App() {
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
-          <nav className="flex bg-[var(--button-secondary)] p-1 rounded-full border border-[var(--border)] mr-2">
+          <div className="h-8 w-px bg-[var(--border)]" />
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden md:block">
+              <p className="text-[10px] font-bold text-[var(--text-heading)] leading-none">{user.displayName}</p>
+              <button 
+                onClick={() => signOut(auth)}
+                className="text-[9px] text-red-500 hover:underline font-bold uppercase tracking-wider"
+              >
+                Log Keluar
+              </button>
+            </div>
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--border)] shadow-sm" />
+            ) : (
+              <div className="w-10 h-10 bg-[var(--accent)] text-white rounded-full flex items-center justify-center font-bold">
+                {user.displayName?.[0] || 'U'}
+              </div>
+            )}
             <button 
-              onClick={() => setActiveTab('records')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${activeTab === 'records' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`}
+              onClick={() => signOut(auth)}
+              className="md:hidden p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="Log Keluar"
             >
-              Perekodan
+              <LogOut size={20} />
             </button>
-            <button 
-              onClick={() => setActiveTab('report')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${activeTab === 'report' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`}
-            >
-              Laporan
-            </button>
-          </nav>
-          <div className="hidden md:flex items-center gap-2 bg-[var(--button-secondary)] px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--border)] text-[var(--text-main)]">
-            <div className="w-2 h-2 bg-green-500 rounded-full" />
-            Aktif
           </div>
         </div>
       </header>
+
+      <div className="bg-[var(--secondary-bg)] border-b border-[var(--border)] px-8 py-2 overflow-x-auto">
+        <nav className="flex items-center gap-6 whitespace-nowrap">
+          <button 
+            onClick={() => setActiveTab('records')}
+            className={`text-[10px] font-bold uppercase tracking-[0.15em] py-2 border-b-2 transition-all ${activeTab === 'records' ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`}
+          >
+            Perekodan Pelajar
+          </button>
+          <button 
+            onClick={() => setActiveTab('report')}
+            className={`text-[10px] font-bold uppercase tracking-[0.15em] py-2 border-b-2 transition-all ${activeTab === 'report' ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`}
+          >
+            Laporan Analisis
+          </button>
+        </nav>
+      </div>
 
       <main className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto w-full">
         {activeTab === 'records' ? (

@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student transport record information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Student unique ID (e.g. IC or matrix number)" },
+        "name": { "type": "string", "description": "Full name of the student" },
+        "form": { "type": "string", "description": "Tingkatan (e.g. TINGKATAN 1)" },
+        "className": { "type": "string", "description": "Class name (e.g. ALPHA)" },
+        "transportMode": { "type": "string", "enum": ["Motosikal", "Kereta", "Bas", "Basikal", "Jalan Kaki", "Dihantar Penjaga", "Lain-lain", "Tiada"], "description": "Mode of transport to school" },
+        "hasLicense": { "type": "boolean", "description": "Whether the student has a valid driving license" },
+        "licenseType": { "type": "string", "enum": ["Motosikal (B2/B)", "Kereta (D/DA)", "Tiada"], "description": "Type of license held" }
+      },
+      "required": ["id", "name", "form", "className", "transportMode", "hasLicense", "licenseType"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of student transport records"
+    }
+  }
+}
