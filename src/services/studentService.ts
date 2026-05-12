@@ -59,19 +59,24 @@ export const studentService = {
     }
   },
 
-  // Helper to seed initial data if collection is empty
+  // Helper to seed initial data and add any missing records
   seedInitialData: async (initialStudents: Student[]) => {
     try {
-      const q = query(collection(db, COLLECTION_PATH), limit(1));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        console.log('Seeding initial data to Firestore...');
-        for (const student of initialStudents) {
+      // For efficiency, we get all existing IDs to compare
+      const snapshot = await getDocs(collection(db, COLLECTION_PATH));
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      
+      const studentsToAdd = initialStudents.filter(s => !existingIds.has(s.id));
+      
+      if (studentsToAdd.length > 0) {
+        console.log(`Menambah ${studentsToAdd.length} rekod pelajar baharu ke Firestore...`);
+        // We use a simple loop for safety
+        for (const student of studentsToAdd) {
           await setDoc(doc(db, COLLECTION_PATH, student.id), student);
         }
       }
     } catch (error) {
-      console.error('Failed to seed data', error);
+      console.error('Gagal menyemak/menambah data awal', error);
     }
   },
 

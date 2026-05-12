@@ -361,12 +361,15 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="h-14 bg-[var(--secondary-bg)] border-t border-[var(--border)] px-8 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-medium tracking-widest uppercase mt-auto">
-        <span>KEMASKINI: {new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-        <span className="hidden sm:block">Sistem Perekodan Pusat Pelajar</span>
-        <div className="flex gap-6">
-          <button className="hover:text-[var(--accent)] transition-colors">Eksport</button>
-          <button className="hover:text-[var(--accent)] transition-colors">Tetapan</button>
+      <footer className="h-20 bg-[var(--secondary-bg)] border-t border-[var(--border)] px-8 flex flex-col sm:flex-row items-center justify-between text-[10px] text-[var(--text-muted)] font-medium tracking-wider uppercase mt-auto py-4 gap-4 text-center sm:text-left">
+        <div className="flex flex-col gap-1">
+          <span>KEMASKINI: {new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <span className="font-bold text-[var(--accent)]">JAWATANKUASA PROGRAM SEKOLAH SELAMAT SMK SERI PERPATIH</span>
+        </div>
+        <span className="hidden lg:block text-[9px] opacity-70">Sistem Perekodan Pusat Pelajar SMK Seri Perpatih</span>
+        <div className="flex gap-6 italic">
+          <button className="hover:text-[var(--accent)] transition-all">Eksport</button>
+          <button className="hover:text-[var(--accent)] transition-all">Tetapan</button>
         </div>
       </footer>
 
