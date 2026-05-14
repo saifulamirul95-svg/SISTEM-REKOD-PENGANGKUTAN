@@ -1,5 +1,5 @@
 
-export type TransportMode = 'Motosikal' | 'Kereta' | 'Bas' | 'Basikal' | 'Jalan Kaki' | 'Dihantar Penjaga' | 'Lain-lain' | 'Tiada';
+export type TransportMode = 'Motosikal' | 'Kereta' | 'Bas' | 'Basikal' | 'Jalan Kaki' | 'Dihantar Penjaga' | 'Lain-lain' | 'Tiada' | 'BERHENTI/PINDAH';
 export type LicenseType = 'Motosikal (B2/B)' | 'Kereta (D/DA)' | 'Tiada';
 
 export interface Student {

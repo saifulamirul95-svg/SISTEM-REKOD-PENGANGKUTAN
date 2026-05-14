@@ -356,7 +356,7 @@ export default function App() {
             </div>
           </>
         ) : (
-          <ReportView stats={stats} />
+          <ReportView stats={stats} students={students} />
         )}
       </main>
 
@@ -405,14 +405,27 @@ function StatCard({ title, value, subtitle, icon, accentColor }: { title: string
   );
 }
 
-function ReportView({ stats }: { stats: any }) {
+function ReportView({ stats, students }: { stats: any, students: Student[] }) {
+  const [drillDown, setDrillDown] = useState<string | null>(null);
+
   const modes = [
     { label: 'Motosikal', value: stats.motosikalCount, icon: <Bike size={18} />, color: 'bg-emerald-500/10 text-emerald-500' },
     { label: 'Kereta', value: stats.keretaCount, icon: <Car size={18} />, color: 'bg-blue-500/10 text-blue-500' },
     { label: 'Basikal', value: stats.basikalCount, icon: <Activity size={18} />, color: 'bg-orange-500/10 text-orange-500' },
     { label: 'Jalan Kaki', value: stats.jalanKakiCount, icon: <Users size={18} />, color: 'bg-slate-500/10 text-slate-500' },
     { label: 'Dihantar Penjaga', value: stats.dihantarPenjagaCount, icon: <MapPin size={18} />, color: 'bg-purple-500/10 text-purple-500' },
+    { label: 'Berhenti/Pindah', value: students.filter(s => s.transportMode === 'BERHENTI/PINDAH').length, icon: <X size={18} />, color: 'bg-red-500/10 text-red-500' },
   ];
+
+  const licensedByForm = useMemo(() => {
+    const licensed = students.filter(s => s.hasLicense);
+    const grouped: Record<string, Student[]> = {};
+    licensed.forEach(s => {
+      if (!grouped[s.form]) grouped[s.form] = [];
+      grouped[s.form].push(s);
+    });
+    return grouped;
+  }, [students]);
 
   return (
     <motion.div 
@@ -431,9 +444,15 @@ function ReportView({ stats }: { stats: any }) {
             <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none">Data Direkod</p>
             <p className="text-3xl font-serif font-bold text-emerald-500">{stats.recordedCount}</p>
           </div>
-          <div className="space-y-1 border-l-2 border-orange-500 pl-4">
+          <div 
+            className="space-y-1 border-l-2 border-orange-500 pl-4 cursor-pointer hover:bg-orange-500/5 transition-colors rounded-r-xl"
+            onClick={() => setDrillDown(drillDown === 'license' ? null : 'license')}
+          >
             <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none">Mempunyai Lesen</p>
-            <p className="text-3xl font-serif font-bold text-orange-500">{stats.totalLicensed}</p>
+            <p className="text-3xl font-serif font-bold text-orange-500 flex items-center gap-2">
+              {stats.totalLicensed}
+              <ChevronRight size={20} className={`transition-transform ${drillDown === 'license' ? 'rotate-90' : ''}`} />
+            </p>
           </div>
           <div className="space-y-1 border-l-2 border-red-500 pl-4">
             <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none">Kelas Selesai</p>
@@ -441,6 +460,51 @@ function ReportView({ stats }: { stats: any }) {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {drillDown === 'license' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-[var(--secondary-bg)] rounded-[32px] border border-[var(--border)] p-8 shadow-inner space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xl font-serif font-bold text-[var(--text-heading)]">Senarai Pelajar Berlesen Mengikut Tingkatan</h4>
+                <button 
+                  onClick={() => setDrillDown(null)}
+                  className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest hover:underline"
+                >
+                  Tutup Paparan
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {(Object.entries(licensedByForm) as [string, Student[]][]).sort((a, b) => a[0].localeCompare(b[0])).map(([form, formStudents]) => (
+                  <div key={form} className="bg-[var(--card)] rounded-2xl border border-[var(--border)] p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4 border-b border-[var(--border)] pb-2">
+                      <span className="font-serif font-bold text-[var(--accent)]">{form}</span>
+                      <span className="text-[10px] font-bold bg-[var(--input-bg)] px-2 py-0.5 rounded-full text-[var(--text-muted)]">{formStudents.length} Orang</span>
+                    </div>
+                    <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                      {formStudents.map(s => (
+                        <div key={s.id} className="flex items-center justify-between text-[11px] group">
+                          <span className="text-[var(--text-main)] truncate max-w-[140px]" title={s.name}>{s.name}</span>
+                          <span className="text-[9px] font-mono text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">{s.className}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {Object.keys(licensedByForm).length === 0 && (
+                  <div className="col-span-full py-12 text-center text-[var(--text-muted)] italic">Tiada data pelesenan direkodkan lagi.</div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <section className="bg-[var(--card)] rounded-[32px] border border-[var(--border)] p-8 shadow-sm space-y-6">
@@ -531,7 +595,7 @@ function EditModal({ student, onClose, onSave }: { student: Student, onClose: ()
   const [transportMode, setTransportMode] = useState<TransportMode>(student.transportMode);
   const [licenseType, setLicenseType] = useState<LicenseType>(student.licenseType);
 
-  const transportOptions: TransportMode[] = ['Motosikal', 'Kereta', 'Bas', 'Basikal', 'Jalan Kaki', 'Dihantar Penjaga', 'Lain-lain', 'Tiada'];
+  const transportOptions: TransportMode[] = ['Motosikal', 'Kereta', 'Bas', 'Basikal', 'Jalan Kaki', 'Dihantar Penjaga', 'Lain-lain', 'Tiada', 'BERHENTI/PINDAH'];
   const licenseOptions: LicenseType[] = ['Motosikal (B2/B)', 'Kereta (D/DA)', 'Tiada'];
 
   return (

@@ -23,7 +23,7 @@ service cloud.firestore {
              data.name is string && data.name.size() <= 200 &&
              data.form is string && data.form.size() <= 50 &&
              data.className is string && data.className.size() <= 50 &&
-             data.transportMode in ['Motosikal', 'Kereta', 'Bas', 'Basikal', 'Jalan Kaki', 'Dihantar Penjaga', 'Lain-lain', 'Tiada'] &&
+             data.transportMode in ['Motosikal', 'Kereta', 'Bas', 'Basikal', 'Jalan Kaki', 'Dihantar Penjaga', 'Lain-lain', 'Tiada', 'BERHENTI/PINDAH'] &&
              data.hasLicense is bool &&
              data.licenseType in ['Motosikal (B2/B)', 'Kereta (D/DA)', 'Tiada'];
     }
